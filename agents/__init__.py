@@ -17,6 +17,16 @@ from .base_agent import (
     APIFallbackError,
 )
 
+from .audio_match_agent import (
+    AudioMatchAgent,
+    AudioFeatures,
+    GenreMoodResult,
+    BPMRange,
+    EnergyLevel,
+    TimbreType,
+    create_audio_agent,
+)
+
 __all__ = [
     "BaseAgent",
     "AgentResponse",
@@ -24,6 +34,13 @@ __all__ = [
     "AgentError",
     "LocalModelError",
     "APIFallbackError",
+    "AudioMatchAgent",
+    "AudioFeatures",
+    "GenreMoodResult",
+    "BPMRange",
+    "EnergyLevel",
+    "TimbreType",
+    "create_audio_agent",
 ]
 
 __version__ = "1.0.0"
