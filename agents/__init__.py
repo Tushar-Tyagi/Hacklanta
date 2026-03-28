@@ -16,7 +16,7 @@ from .base_agent import (
     LocalModelError,
     APIFallbackError,
 )
-
+from .style_director import StyleDirectorAgent, StyleResult, LUTRecommendation
 from .audio_match_agent import (
     AudioMatchAgent,
     AudioFeatures,
@@ -34,6 +34,9 @@ __all__ = [
     "AgentError",
     "LocalModelError",
     "APIFallbackError",
+    "StyleDirectorAgent",
+    "StyleResult",
+    "LUTRecommendation",
     "AudioMatchAgent",
     "AudioFeatures",
     "GenreMoodResult",
