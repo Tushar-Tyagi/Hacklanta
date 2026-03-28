@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video Editing Director</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1><i class="fas fa-film"></i> AI Video Director</h1>
+            <p>Upload video and audio to automatically generate edited compositions</p>
+        </header>
+
+        <main>
+            <div class="upload-section card">
+                <h2>1. Upload Media</h2>
+                
+                <form id="upload-form" enctype="multipart/form-data">
+                    <div class="file-inputs">
+                        <div class="input-group">
+                            <label for="videoFile"><i class="fas fa-video"></i> Video File</label>
+                            <input type="file" id="videoFile" name="video" accept="video/mp4,video/x-m4v,video/*">
+                            <div class="file-status" id="video-status">No file selected</div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="audioFile"><i class="fas fa-music"></i> Audio File (Optional)</label>
+                            <input type="file" id="audioFile" name="audio" accept="audio/mp3,audio/wav,audio/*">
+                            <div class="file-status" id="audio-status">No file selected</div>
+                        </div>
+                    </div>
+
+                    <div class="actions">
+                        <button type="submit" id="processBtn" class="btn primary-btn" disabled>
+                            <i class="fas fa-cogs"></i> Analyze & Process
+                        </button>
+                    </div>
+                </form>
+
+                <div id="progress-container" class="hidden">
+                    <h3>Processing...</h3>
+                    <div class="progress-bar-bg">
+                        <div id="progress-bar" class="progress-bar-fill"></div>
+                    </div>
+                    <p id="progress-text">Initializing...</p>
+                    <ul id="processing-steps" class="step-list">
+                        <li id="step-upload" class="pending"><i class="fas fa-circle"></i> Uploading files</li>
+                        <li id="step-scene" class="pending"><i class="fas fa-circle"></i> Scene Detection</li>
+                        <li id="step-audio" class="pending"><i class="fas fa-circle"></i> Audio Analysis</li>
+                        <li id="step-style" class="pending"><i class="fas fa-circle"></i> Style Recommendation</li>
+                        <li id="step-compose" class="pending"><i class="fas fa-circle"></i> Edit Composition</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="results-section" class="results-section hidden">
+                <!-- Results will be injected here -->
+            </div>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
