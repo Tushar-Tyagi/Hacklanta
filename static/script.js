@@ -173,6 +173,51 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
+            // STEP 0: Check Cache (Optimization)
+            updateProgress(5, 'Checking for existing results...', 'step-upload');
+            
+            const videoFiles = Array.from(videoInput.files);
+            const hashes = [];
+            
+            // Progress update for hashing
+            for (let i = 0; i < videoFiles.length; i++) {
+                const file = videoFiles[i];
+                if (videoFiles.length > 1) {
+                    updateProgress(5, `Identifying clip ${i+1}/${videoFiles.length}...`, 'step-upload');
+                } else {
+                    updateProgress(5, `Identifying clip...`, 'step-upload');
+                }
+                const hash = await calculateFileHash(file);
+                hashes.push(hash);
+            }
+
+            // Call check-cache endpoint
+            const cacheResponse = await fetch('/api/check-cache', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hashes })
+            });
+
+            if (cacheResponse.ok) {
+                const cacheData = await cacheResponse.json();
+                
+                // If ALL hashes were found, we can skip the upload and processing!
+                if (cacheData.found_count === hashes.length && hashes.length > 0) {
+                    updateProgress(100, 'Found in cache! Loading results...', null);
+                    
+                    const mergedResults = mergeCachedResults(cacheData.results, hashes);
+                    // Add timing info for the cache hit
+                    mergedResults.timing = {
+                        "cache_lookup": "Found All",
+                        "total_processing_time": "0.1s (Cached)"
+                    };
+                    
+                    displayResults(mergedResults);
+                    return;
+                }
+            }
+
+            // Proceed with normal upload if not all found in cache
             updateProgress(10, 'Uploading files...', 'step-upload');
 
             const response = await fetch('/api/process', {
@@ -213,6 +258,68 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Helpers ---
+    /**
+     * Calculate SHA-256 hash of a file.
+     * Note: Reads the whole file into an ArrayBuffer to match backend hashing.
+     */
+    async function calculateFileHash(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const buffer = e.target.result;
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                    resolve(hashHex);
+                } catch (err) {
+                    reject(err);
+                }
+            };
+            reader.onerror = () => reject(new Error("Failed to read file for hashing"));
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    /**
+     * Merge individual cached results into a single project result object.
+     */
+    function mergeCachedResults(cachedMap, hashes) {
+        const allScenes = [];
+        const videoStyles = [];
+        let firstAudio = null;
+        let firstComposition = null;
+
+        hashes.forEach(h => {
+            const data = cachedMap[h];
+            if (data) {
+                if (data.scenes) allScenes.push(...data.scenes);
+                if (data.style) videoStyles.push(data.style);
+                if (!firstAudio && data.audio) firstAudio = data.audio;
+                if (!firstComposition && data.composition) firstComposition = data.composition;
+            }
+        });
+
+        return {
+            status: 'success',
+            tasks: {
+                upload: true,
+                scene_detection: true,
+                audio_analysis: !!firstAudio,
+                style_recommendation: true,
+                composition: true,
+                video_render: false
+            },
+            results: {
+                scenes: allScenes,
+                audio: firstAudio || { analyzed: false, bpm: 0, energy: 'N/A', mood: 'N/A' },
+                style: videoStyles[0] || {},
+                composition: firstComposition || {}
+            },
+            cached: true
+        };
+    }
+
     function formatDuration(seconds) {
         if (!seconds) return 'Unknown duration';
         const mins = Math.floor(seconds / 60);

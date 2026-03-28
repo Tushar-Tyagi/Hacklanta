@@ -91,13 +91,14 @@ class VideoProcessor:
         cap.release()
         return scenes
         
-    def extract_keyframe(self, video_path: str, timestamp: float = 2.0) -> Optional[str]:
+    def extract_keyframe(self, video_path: str, timestamp: float = 2.0, max_dimension: int = 1024) -> Optional[str]:
         """
         Extract a single keyframe from a video at a specific time.
         
         Args:
             video_path: Path to video
             timestamp: Time in seconds to grab the frame from
+            max_dimension: Max width/height for downsampling
             
         Returns:
             Path to the extracted .jpg file
@@ -114,6 +115,13 @@ class VideoProcessor:
         cap.release()
         
         if ret:
+            # Downsample if needed
+            h, w = frame.shape[:2]
+            if max(h, w) > max_dimension:
+                scale = max_dimension / max(h, w)
+                new_w, new_h = int(w * scale), int(h * scale)
+                frame = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
             # Save frame to same directory as video
             output_path = f"{os.path.splitext(video_path)[0]}_frame.jpg"
             cv2.imwrite(output_path, frame)
@@ -121,13 +129,14 @@ class VideoProcessor:
             
         return None
 
-    def extract_frames_at_fps(self, video_path: str, target_fps: float = 1.0) -> List[str]:
+    def extract_frames_at_fps(self, video_path: str, target_fps: float = 1.0, max_dimension: int = 1024) -> List[str]:
         """
         Extract frames from a video at a specific FPS.
         
         Args:
             video_path: Path to video
             target_fps: Number of frames per second to extract
+            max_dimension: Max width/height for downsampling
             
         Returns:
             List of paths to extracted .jpg files
@@ -149,15 +158,21 @@ class VideoProcessor:
         
         extracted_paths = []
         base_name = os.path.splitext(video_path)[0]
-        # Use a temporary directory for frames
-        output_dir = f"{base_name}_temp_frames"
+        # Use a temporary directory for frames - use absolute path to avoid issues
+        output_dir = os.path.abspath(f"{base_name}_temp_frames")
         os.makedirs(output_dir, exist_ok=True)
         
         for i, idx in enumerate(frame_indices):
             cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
             ret, frame = cap.read()
             if ret:
-                # Resize for efficiency if needed, but keeping original for now
+                # Downsample for efficiency
+                h, w = frame.shape[:2]
+                if max(h, w) > max_dimension:
+                    scale = max_dimension / max(h, w)
+                    new_w, new_h = int(w * scale), int(h * scale)
+                    frame = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
                 frame_path = os.path.join(output_dir, f"frame_{i:04d}.jpg")
                 cv2.imwrite(frame_path, frame)
                 extracted_paths.append(frame_path)

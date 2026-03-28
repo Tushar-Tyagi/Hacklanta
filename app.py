@@ -166,6 +166,33 @@ def download_audio_endpoint():
         return jsonify({'error': f'Failed to download audio: {str(e)}'}), 500
 
 
+@app.route('/api/check-cache', methods=['POST'])
+def check_cache():
+    """Check if results for a given set of file hashes already exist."""
+    data = request.get_json()
+    if not data or 'hashes' not in data:
+        return jsonify({'error': 'No hashes provided'}), 400
+    
+    hashes = data['hashes']
+    if not isinstance(hashes, list):
+        return jsonify({'error': 'Hashes must be a list'}), 400
+        
+    found_results = {}
+    
+    for h in hashes:
+        # We use the finegrained suffix used in run_agents
+        h_fg = f"{h}_finegrained_v1"
+        cached = default_cache.get_cached_result(h_fg)
+        if cached:
+            found_results[h] = cached
+            
+    return jsonify({
+        'status': 'success',
+        'found_count': len(found_results),
+        'results': found_results
+    })
+
+
 @app.route('/api/process', methods=['POST'])
 def process_media():
     if 'video' not in request.files:
@@ -421,4 +448,4 @@ def run_agents(video_paths, audio_path, task_id, target_duration='30', apply_edi
     return results
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=5002, debug=True)

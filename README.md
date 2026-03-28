@@ -1,14 +1,14 @@
-# 🎬 Hacklanta
+# 🎬 Cullo AI
 
-**AI-powered media analysis framework** with dual-processing architecture — local ML models first, with LLM API fallback for higher-order reasoning.
+**Agent-Based Intelligence for Short-Form Video Generation** — Transform raw footage into platform-optimized reels through a team of specialized AI agents.
 
-Built for the [HackATL / Hacklanta](https://hackatl.org) hackathon.
+Built for the [Hacklanta](https://hackatlanta.dev) hackathon.
 
 ---
 
 ## ✨ What It Does
 
-Hacklanta provides specialized **AI agents** that analyze audio and visual media:
+Cullo AI provides specialized **AI agents** that analyze audio and visual media:
 
 | Agent | Local Processing | API Fallback |
 |---|---|---|
