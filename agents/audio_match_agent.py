@@ -218,7 +218,7 @@ class AudioMatchAgent(BaseAgent):
         try:
             # Load audio file with limited duration for efficiency
             duration = min(
-                librosa.get_duration(filename=audio_path),
+                librosa.get_duration(path=audio_path),
                 self.local_analyze_duration
             )
 
@@ -234,9 +234,9 @@ class AudioMatchAgent(BaseAgent):
             if bpm > self.MAX_BPM:
                 bpm = bpm / 2  # Halve if too fast
 
-            # Calculate BPM confidence based on beat detection strength
-            beat_strength = np.mean(librosa.beat.beat_track(y=y, sr=sr, units="strength"))
-            bpm_confidence = min(1.0, beat_strength / 100.0) if beat_strength else 0.5
+            # Calculate BPM confidence based on beat frames
+            # Use beat frames density as confidence indicator
+            bpm_confidence = min(1.0, len(beat_frames) / 20.0) if len(beat_frames) > 0 else 0.5
 
             # Energy analysis - RMS amplitude
             rms = librosa.feature.rms(y=y)

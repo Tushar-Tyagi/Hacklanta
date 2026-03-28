@@ -26,6 +26,16 @@ from .audio_match_agent import (
     TimbreType,
     create_audio_agent,
 )
+from .creative_director import CreativeDirectorAgent
+from .video_processor import VideoProcessor
+from .video_editor import (
+    VideoEditor,
+    EditPlan,
+    VideoPart,
+    CutType,
+    TransitionType,
+    create_video_editor,
+)
 
 __all__ = [
     "BaseAgent",
@@ -44,6 +54,14 @@ __all__ = [
     "EnergyLevel",
     "TimbreType",
     "create_audio_agent",
+    "CreativeDirectorAgent",
+    "VideoProcessor",
+    "VideoEditor",
+    "EditPlan",
+    "VideoPart",
+    "CutType",
+    "TransitionType",
+    "create_video_editor",
 ]
 
 __version__ = "1.0.0"

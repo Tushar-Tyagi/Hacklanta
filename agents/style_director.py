@@ -1,6 +1,10 @@
 """Style Director Agent - Image aesthetic analysis with histogram matching."""
 
 import time
+import os
+import base64
+import json
+import concurrent.futures
 from enum import Enum
 from typing import List, Tuple, Dict, Any, Optional
 from dataclasses import dataclass, field
@@ -57,6 +61,7 @@ class StyleResult:
     saturation_level: str  # "muted", "moderate", "vibrant"
     temperature: str  # "cool", "neutral", "warm"
     confidence: float
+    color_grading_notes: str = ""  # Color grading advice from API
     lut_recommendations: List[LUTRecommendation] = field(default_factory=list)
     target_image_histogram: Optional[np.ndarray] = None
     source_image_histogram: Optional[np.ndarray] = None
@@ -76,6 +81,7 @@ class StyleResult:
             "saturation_level": self.saturation_level,
             "temperature": self.temperature,
             "confidence": self.confidence,
+            "color_grading_notes": self.color_grading_notes,
             "lut_recommendations": [lut.to_dict() for lut in self.lut_recommendations],
             "histogram_similarity": self.histogram_similarity,
             "processing_time_ms": self.processing_time_ms,
@@ -97,7 +103,7 @@ class StyleDirectorAgent(BaseAgent):
     - Cinematic LUT recommendations
     """
     
-    DEFAULT_API_MODEL = "openai/gpt-4o-mini"
+    DEFAULT_API_MODEL = "qwen/qwen-vl-plus"
     DEFAULT_CONFIDENCE_THRESHOLD = 0.6
     
     # Predefined cinematic LUTs
@@ -271,8 +277,9 @@ class StyleDirectorAgent(BaseAgent):
         
         primary_colors = []
         for idx in sorted_indices[:num_colors]:
-            center = centers[idx].astype(np.int32)
-            rgb = (center[2], center[1], center[0])
+            center = centers[idx]
+            # Cast to standard Python int to avoid JSON serialization errors (np.int32)
+            rgb = (int(center[2]), int(center[1]), int(center[0]))
             primary_colors.append(rgb)
         
         return primary_colors
@@ -607,31 +614,91 @@ class StyleDirectorAgent(BaseAgent):
         if self.mode == ProcessingMode.LOCAL_ONLY:
             return style_result
         
-        if style_result.confidence >= self.confidence_threshold:
+        # In API_ONLY mode, always call the API
+        # In other modes, skip if confidence is already high
+        if self.mode != ProcessingMode.API_ONLY and style_result.confidence >= self.confidence_threshold:
             return style_result
         
         try:
-            prompt = f"""Analyze this image's aesthetic style and provide recommendations.
-
-Current Local Analysis:
-- Primary Colors: {style_result.primary_colors[:3]}
-- Dominant Tones: {style_result.dominant_tones}
-- Mood: {style_result.mood}
+            # Encode image to base64
+            with open(image_path, "rb") as image_file:
+                encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+            
+            prompt = f"""Analyze this image's cinematic style and provide professional colorist recommendations.
+ 
+ Current Local Metrics:
+ - Mood: {style_result.mood}
 - Contrast: {style_result.contrast_level}
-- Saturation: {style_result.saturation_level}
-- Temperature: {style_result.temperature}
-- Confidence: {style_result.confidence:.2f}
+ - Temperature: {style_result.temperature}
+ 
+ Respond in JSON format with:
+ 1. refined_mood: (string) Mood description
+ 2. visual_description: (string) Narrative description of subjects, lighting, and composition
+ 3. color_palette: (array) 3-5 HEX codes seen in the image
+ 4. lut_selections: (array) Names of recommended LUTs from: {', '.join([lut.name for lut in self.CINEMATIC_LUTS])}
+ 5. color_grading_advice: (string) Specific advice for highlights, shadows, and midtones."""
+ 
+            messages = [
+                {
+                    "role": "system",
+                    "content": "You are an expert AI Cinematographer and Colorist. Analyze images and return valid JSON."
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{encoded_string}"
+                            }
+                        }
+                    ]
+                }
+            ]
 
-Provide a JSON response with:
-1. refined_mood: (string) Refined mood description
-2. enhanced_notes: (string) Additional aesthetic insights
-3. lut_selections: (array) Names of recommended LUTs from: {', '.join([lut.name for lut in self.CINEMATIC_LUTS])}
-4. additional_recommendations: (array) Any other style advice"""
-
-            response = self.process(prompt)
+            # Call the API directly since we need multi-modal support
+            response_obj = self._client.chat.completions.create(
+                model=self.api_model,
+                messages=messages,
+                temperature=self.api_temperature,
+                max_tokens=self.max_tokens,
+            )
+            response_content = response_obj.get_content()
+            response_confidence = response_obj.confidence if hasattr(response_obj, 'confidence') else 0.9
+            
+            response = AgentResponse(
+                content=response_content,
+                confidence=response_confidence,
+                mode_used="api",
+                source="api",
+                model_used=self.api_model
+            )
             
             if response.content:
-                style_result.metadata["api_analysis"] = response.content
+                # Clean up if model adds markdown blocks
+                content = response.content
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
+                
+                try:
+                    api_data = json.loads(content)
+                    style_result.mood = api_data.get("refined_mood", style_result.mood)
+                    style_result.metadata["visual_description"] = api_data.get("visual_description", "")
+                    style_result.metadata["color_palette"] = api_data.get("color_palette", [])
+                    style_result.color_grading_notes = api_data.get("color_grading_advice", style_result.color_grading_notes)
+                    
+                    # Update LUT recommendations based on API choice
+                    lut_names = api_data.get("lut_selections", [])
+                    if lut_names:
+                        new_luts = [lut for lut in self.CINEMATIC_LUTS if lut.name in lut_names]
+                        if new_luts:
+                            style_result.lut_recommendations = new_luts
+                except json.JSONDecodeError:
+                    style_result.metadata["api_raw_content"] = content
+                
                 style_result.metadata["api_confidence"] = response.confidence
                 style_result.source = "api"
             
@@ -653,6 +720,104 @@ Provide a JSON response with:
             result = self.analyze_style_with_api(image_path, result)
         
         return result
+
+    def analyze_video_chunk(self, image_paths: List[str]) -> Dict[str, Any]:
+        """
+        Analyze a 10-second video chunk (sequence of images) using VLM.
+        """
+        if not image_paths:
+            return {}
+
+        try:
+            # Encode all images to base64
+            # We limit to 10 frames to avoid token limits or processing issues
+            image_paths = image_paths[:10]
+            
+            contents = [
+                {"type": "text", "text": "Analyze this video sequence (1 frame per second). Provide a detailed summary of the action, subjects, and camera movements."}
+            ]
+            
+            for path in image_paths:
+                if not os.path.exists(path):
+                    continue
+                with open(path, "rb") as image_file:
+                    encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                contents.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{encoded_string}"
+                    }
+                })
+
+            prompt_json = """Respond ONLY in valid JSON format with:
+1. summary: (string) A cohesive 1-2 sentence summary of what happens in this window.
+2. actions: (array) List of specific physical actions observed.
+3. camera_movement: (string) Predominant camera movement (Static, Pan, Tilt, Zoom, Tracking, Handheld).
+4. subjects: (array) Key subjects/objects identified.
+5. pacing: (string) Low, Medium, or High energy/pacing."""
+
+            messages = [
+                {
+                    "role": "system",
+                    "content": "You are an expert AI Video Analyst and Creative Director. Analyze image sequences and return valid JSON."
+                },
+                {
+                    "role": "user",
+                    "content": contents + [{"type": "text", "text": prompt_json}]
+                }
+            ]
+
+            # Use qwen/qwen-vl-plus as it's good for video-like sequences
+            response = self._process_api_only(json.dumps(messages)) # Helper to call API
+            # Wait, self.process is better as it handles messages correctly
+            # But BaseAgent.process expects a string prompt for some logic
+            # Let's check how BaseAgent handles list of messages
+            
+            # Re-reading BaseAgent.process... it expects prompt as string.
+            # But for vision models we need the structured content.
+            # Let's use self._api_processing directly if it supports it or modify it.
+            
+            # Actually, I should check if I can pass messages to self.process
+            # In BaseAgent: messages.append({"role": "user", "content": prompt})
+            # If prompt is a list/dict, it might break.
+            
+            # I will call self._client.chat.completions.create directly or 
+            # ensure self.process handles it.
+            
+            response_obj = self._client.chat.completions.create(
+                model=self.api_model,
+                messages=messages,
+                temperature=self.api_temperature,
+                max_tokens=self.max_tokens,
+            )
+            
+            content = response_obj.get_content()
+            
+            if content:
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
+                
+                return json.loads(content)
+        except Exception as e:
+            print(f"Chunk analysis failed: {e}")
+            return {"error": str(e)}
+        
+        return {}
+
+    def analyze_chunks_parallel(self, all_chunks: List[List[str]], max_workers: int = 5) -> List[Dict[str, Any]]:
+        """Analyze multiple video chunks in parallel."""
+        results = [None] * len(all_chunks)
+        
+        def process_chunk(index, chunk):
+            results[index] = self.analyze_video_chunk(chunk)
+            
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            for i, chunk in enumerate(all_chunks):
+                executor.submit(process_chunk, i, chunk)
+                
+        return results
 
 
 def create_style_director(

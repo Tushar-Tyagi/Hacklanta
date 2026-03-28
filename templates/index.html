@@ -9,27 +9,66 @@
 </head>
 <body>
     <div class="app-container">
-        <header>
-            <h1><i class="fas fa-film"></i> AI Video Director</h1>
-            <p>Upload video and audio to automatically generate edited compositions</p>
-        </header>
+            <header>
+                <h1><i class="fas fa-film"></i> AI Video Director</h1>
+                <p>Upload video and audio to automatically generate edited compositions</p>
+            </header>
 
-        <main>
-            <div class="upload-section card">
-                <h2>1. Upload Media</h2>
-                
-                <form id="upload-form" enctype="multipart/form-data">
-                    <div class="file-inputs">
+            <main>
+                <div class="upload-section card">
+                    <h2>1. Upload Media & Settings</h2>
+                    
+                    <form id="upload-form" enctype="multipart/form-data">
+                        <div class="settings-row">
+                            <div class="input-group duration-input">
+                                <label for="targetDuration"><i class="fas fa-stopwatch"></i> Target Duration (seconds)</label>
+                                <div class="number-input-wrapper">
+                                    <input type="number" id="targetDuration" name="target_duration" min="5" max="300" value="30">
+                                    <span class="unit">sec</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="file-inputs">
                         <div class="input-group">
-                            <label for="videoFile"><i class="fas fa-video"></i> Video File</label>
-                            <input type="file" id="videoFile" name="video" accept="video/mp4,video/x-m4v,video/*">
-                            <div class="file-status" id="video-status">No file selected</div>
+                            <label for="videoFile"><i class="fas fa-video"></i> Video Files (one or more)</label>
+                            <input type="file" id="videoFile" name="video" accept="video/mp4,video/x-m4v,video/*" multiple>
+                            <div class="file-status" id="video-status">No files selected</div>
+                            <div id="selected-video-list" class="file-list-preview hidden"></div>
                         </div>
                         
                         <div class="input-group">
-                            <label for="audioFile"><i class="fas fa-music"></i> Audio File (Optional)</label>
-                            <input type="file" id="audioFile" name="audio" accept="audio/mp3,audio/wav,audio/*">
-                            <div class="file-status" id="audio-status">No file selected</div>
+                            <label><i class="fas fa-music"></i> Audio (Optional)</label>
+                            <div class="audio-source-toggle">
+                                <button type="button" class="toggle-btn active" id="toggleUpload" data-target="audio-upload-panel">
+                                    <i class="fas fa-upload"></i> Upload File
+                                </button>
+                                <button type="button" class="toggle-btn" id="toggleUrl" data-target="audio-url-panel">
+                                    <i class="fas fa-link"></i> Paste URL
+                                </button>
+                            </div>
+                            
+                            <div id="audio-upload-panel" class="audio-panel">
+                                <input type="file" id="audioFile" name="audio" accept="audio/mp3,audio/wav,audio/*">
+                                <div class="file-status" id="audio-status">No file selected</div>
+                            </div>
+                            
+                            <div id="audio-url-panel" class="audio-panel hidden">
+                                <div class="url-input-wrapper">
+                                    <input type="url" id="audioUrl" name="audio_url" 
+                                           placeholder="https://youtube.com/watch?v=... or TikTok/Instagram link"
+                                           autocomplete="off">
+                                    <button type="button" id="previewUrlBtn" class="btn preview-btn" title="Verify URL">
+                                        <i class="fas fa-check-circle"></i>
+                                    </button>
+                                </div>
+                                <div class="platform-hints">
+                                    <span><i class="fab fa-youtube"></i> YouTube</span>
+                                    <span><i class="fab fa-instagram"></i> Instagram</span>
+                                    <span><i class="fab fa-tiktok"></i> TikTok</span>
+                                </div>
+                                <div class="file-status" id="url-status"></div>
+                            </div>
                         </div>
                     </div>
 

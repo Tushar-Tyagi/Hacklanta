@@ -438,6 +438,11 @@ class _ChatCompletionsEndpoint:
     def __init__(self, client: OpenRouterClient):
         self._client = client
     
+    @property
+    def completions(self):
+        """Return self so client.chat.completions.create() works (OpenAI-compatible)."""
+        return self
+    
     def create(
         self,
         messages: List[Union[ChatMessage, Dict[str, Any]]],

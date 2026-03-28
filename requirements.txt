@@ -1,93 +1,79 @@
-# Computer Vision & Media Processing Dependencies
-# ================================================
-# Core dependencies for the Hacklanta project
-# Python 3.9+ recommended
+# Hacklanta — Core Dependencies
+# ==============================
+# Python 3.10+ recommended (3.14 has limited TensorFlow support)
 
 # Ultralytics (YOLOv8) - Object Detection
-# Latest stable version with compatible torch
 ultralytics>=8.0.0,<9.0.0
 torch>=2.0.0
 torchvision>=0.15.0
-
-# DeepFace - Face Recognition & Analysis
-deepface>=0.0.83
 
 # MediaPipe - Face Detection, Pose Estimation, Hand Tracking
 mediapipe>=0.10.0
 
 # Librosa - Audio Analysis
 librosa>=0.10.0
+soundfile>=0.12.0
 
 # OpenCV - Image/Video Processing
 opencv-python>=4.8.0
-opencv-python-headless>=4.8.0  # For headless servers
 
 # Numerical Computing
 numpy>=1.24.0
 pandas>=2.0.0
-
-# MoviePy - Video Editing
-moviepy>=1.0.3
-
-# Scientific Computing
 scipy>=1.11.0
 
-# Additional Required Dependencies
-# --------------------------------
-Pillow>=10.0.0          # Image processing
-tensorboard>=2.13.0     # Visualization (optional for YOLO)
-tqdm>=4.65.0            # Progress bars
-requests>=2.28.0        # HTTP requests (for DeepFace models)
-flask>=2.3.0            # Web framework (optional)
-fastapi>=0.100.0        # API framework (optional)
-uvicorn>=0.23.0         # ASGI server (optional)
+# Image Processing
+Pillow>=10.0.0
 
+# Video Editing
+moviepy>=1.0.3
+
+# HTTP / API
+requests>=2.28.0
+
+# Audio/Video Download from URLs
+yt-dlp>=2026.3.17
+python-dotenv
+
+# Progress bars
+tqdm>=4.65.0
+
+# YAML parsing (ultralytics dep, but useful standalone)
+pyyaml>=5.3.1
+
+# Optional: Web frameworks (uncomment if needed)
+# flask>=2.3.0
+# fastapi>=0.100.0
+# uvicorn>=0.23.0
+
+# Optional: Visualization
+# tensorboard>=2.13.0
+
+# ==============================
+# Optional: Face Recognition
+# ==============================
+# DeepFace requires TensorFlow, which may not be available on all platforms.
+# Install separately:
+#
+#   pip install deepface tensorflow        # Linux / Intel Mac
+#   pip install deepface tensorflow-macos  # Apple Silicon (Python ≤3.12)
+#
+# deepface>=0.0.83
+
+# ==============================
 # Platform-Specific Notes
-# =======================
+# ==============================
 #
-# macOS (Apple Silicon - M1/M2/M3):
-#   - Install with: pip install --no-cache-dir -r requirements.txt
+# macOS (Apple Silicon - M1/M2/M3/M4):
+#   - TensorFlow via: pip install tensorflow-macos tensorflow-metal
+#   - Requires Python ≤3.12 for TensorFlow support
 #   - Some packages may require Rosetta2: softwareupdate --install-rosetta
-#   - For tensorflow, consider using tensorflow-macos:
-#     pip install tensorflow-macos tensorflow-metal
-#
-# macOS (Intel):
-#   - Standard pip installation should work out of the box
-#   - May need to install OpenCV with brew: brew install opencv
 #
 # Linux (Ubuntu/Debian):
-#   - Install system dependencies first:
-#     sudo apt-get update
-#     sudo apt-get install -y libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1
-#   - For face recognition, you may need: sudo apt-get install -y dlib libface-recognition0
-#
-# Windows:
-#   - Use Visual C++ Redistributable for OpenCV
-#   - Download from: https://aka.ms/vs/17/release/vc_redist.x64.exe
-#
-# Headless Servers (Linux/WSL):
-#   - Use opencv-python-headless instead of opencv-python
-#   - Install: sudo apt-get install -y libgl1-mesa-glx libglib2.0-0
+#   sudo apt-get install -y libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1
 #
 # GPU Acceleration (NVIDIA CUDA):
-#   - Install CUDA Toolkit 11.8+ and cuDNN
-#   - Then install PyTorch with CUDA:
-#     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-#   - Verify with: python -c "import torch; print(torch.cuda.is_available())"
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 #
-# Troubleshooting
-# ===============
-# If build errors occur:
-#   1. Update pip: pip install --upgrade pip setuptools wheel
-#   2. Install build tools: pip install cmake
-#   3. For DeepFace issues: pip install dlib --precomputed
-#
-# If librosa fails to load audio files:
-#   - Install ffmpeg: brew install ffmpeg (macOS)
-#   - sudo apt-get install ffmpeg (Linux)
-#   - pip install ffmpeg-python
-#
-# Verification
-# ============
-# Run this to verify installation:
-#   python -c "import ultralytics; import deepface; import mediapipe; import librosa; import cv2; import numpy; import pandas; import moviepy; print('All packages imported successfully!')"
+# Headless Servers:
+#   Replace opencv-python with opencv-python-headless
