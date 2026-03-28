@@ -84,7 +84,6 @@ jupyter notebook test_agents.ipynb
 
 ---
 
-<<<<<<< Updated upstream
 ## 🖥️ How to test the frontend UI
 
 1. Start the backend Flask server:
@@ -107,8 +106,6 @@ python app.py
 
 ---
 
-=======
->>>>>>> Stashed changes
 ## 🔧 Usage
 
 ### Processing Modes
